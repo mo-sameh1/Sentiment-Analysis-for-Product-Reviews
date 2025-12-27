@@ -1,0 +1,34 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+    ports:
+      - "27017:27017"
+
+  web-app:
+    build: .
+    container_name: web-app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=${MONGO_URI_DOCKER:-mongodb://mongo:27017/}
+      - DB_NAME=${DB_NAME:-amazon_reviews}
+      - COLLECTION_NAME=${COLLECTION_NAME:-reviews}
+      - KAGGLE_CONFIG_DIR=/app
+    volumes:
+      - .:/app
+    networks:
+      - app-network
+
+volumes:
+  mongo_data:
+
+networks:
+  app-network:
+    driver: bridge

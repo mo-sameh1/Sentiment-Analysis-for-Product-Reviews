@@ -1,0 +1,8 @@
+streamlit
+pymongo
+pydantic
+pandas
+python-dotenv
+scikit-learn
+numpy
+kaggle
