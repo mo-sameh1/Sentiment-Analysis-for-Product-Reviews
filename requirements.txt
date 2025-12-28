@@ -6,3 +6,5 @@ python-dotenv
 scikit-learn
 numpy
 kaggle
+seaborn
+wordcloud
