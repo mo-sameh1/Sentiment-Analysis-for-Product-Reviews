@@ -1,9 +1,39 @@
-import streamlit as st
+# import streamlit as st
 import os
 from src.fetchers.mongo_fetcher import MongoFetcher
+from src.fetchers.csv_fetcher import CSVFetcher
 from src.models import Review
+from src.pipeline import Pipeline
+from src.transformers.text_sentiment_transformer import TextSentimentTransformer
+from src.loaders.sentiment_loader import SKLearnSentimentLoader
 
 # Configuration
+
+
+
+
+
+
+
+
+file_path="src/fetchers/data.csv"
+pipeline = Pipeline(CSVFetcher(file_path), TextSentimentTransformer(), SKLearnSentimentLoader("src/loaders/best_sentiment_model.pkl"))
+
+pipeline.run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+exit()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 DB_NAME = os.getenv("DB_NAME", "amazon_reviews")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "reviews")
@@ -11,8 +41,12 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME", "reviews")
 st.title("Amazon Fine Food Reviews Sentiment Analysis")
 
 @st.cache_resource
-def get_fetcher():
-    return MongoFetcher(MONGO_URI, DB_NAME, COLLECTION_NAME)
+def get_fetcher(type: str):
+    if type == "csv":
+        return CSVFetcher(file_path)
+    else:
+        return MongoFetcher(MONGO_URI, DB_NAME, COLLECTION_NAME)
+    
 
 fetcher = get_fetcher()
 

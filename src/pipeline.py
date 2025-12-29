@@ -12,6 +12,8 @@ class Pipeline:
 
     def run(self) -> List[Sentiment]:
         data = self.fetcher.fetch_data()
-        transformed_data = self.transformer.transform(data)
+        transformed_data,_ = self.transformer.transform(data)
         predictions = self.loader.predict(transformed_data)
+        print("predictions : ",predictions)
+        print("pipeline completed")
         return predictions

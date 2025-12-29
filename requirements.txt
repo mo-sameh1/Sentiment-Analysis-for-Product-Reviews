@@ -8,3 +8,5 @@ numpy
 kaggle
 seaborn
 wordcloud
+nltk==3.9.2
+regex==2025.11.3
