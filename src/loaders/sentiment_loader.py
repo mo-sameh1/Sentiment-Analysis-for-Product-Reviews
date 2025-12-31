@@ -65,3 +65,22 @@ class SKLearnSentimentLoader(ModelLoader):
             results.append(Sentiment(label=label, confidence=confidence))
 
         return results
+
+    def predict_single(self, features: Any) -> Sentiment:
+        """Predicts sentiment for a single sample."""
+        if self.model is None:
+            self.load()
+        
+        if hasattr(self.model, "predict_proba"):
+            prob = self.model.predict_proba(features)[0, 1]
+        else:
+            prob = self.model.predict(features)[0]
+            
+        if prob >= 0.5:
+            label = "positive"
+            confidence = float(prob)
+        else:
+            label = "negative"
+            confidence = float(1 - prob)
+            
+        return Sentiment(label=label, confidence=confidence)

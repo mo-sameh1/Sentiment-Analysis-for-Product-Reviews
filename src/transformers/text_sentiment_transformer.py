@@ -3,17 +3,24 @@ from typing import Any, List, Tuple, Union
 import pandas as pd
 import re
 import nltk
+import joblib
+import os
+
+def _ensure_nltk_data():
+    """Ensure required NLTK data is downloaded."""
+    for resource in ["stopwords", "wordnet", "omw-1.4"]:
+        try:
+            nltk.data.find(f"corpora/{resource}" if resource != "omw-1.4" else f"corpora/omw-1.4")
+        except LookupError:
+            nltk.download(resource, quiet=True)
+
+_ensure_nltk_data()
 
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from src.models import Review
 from src.transformers.base import DataTransformer
-
-# Download required NLTK resources
-nltk.download("stopwords")
-nltk.download("wordnet")
-nltk.download("omw-1.4")
 
 
 
@@ -47,6 +54,28 @@ class TextSentimentTransformer(DataTransformer):
             if w not in self.stop_words
         ]
         return " ".join(words)
+
+    def save_vectorizer(self, path: str):
+        """Saves the fitted vectorizer to disk."""
+        joblib.dump(self.vectorizer, path)
+        print(f"Vectorizer saved to {path}")
+
+    def load_vectorizer(self, path: str):
+        """Loads a fitted vectorizer from disk."""
+        if os.path.exists(path):
+            self.vectorizer = joblib.load(path)
+            print(f"Vectorizer loaded from {path}")
+        else:
+            raise FileNotFoundError(f"Vectorizer not found at {path}")
+
+    def transform_inference(self, text: str):
+        """Transforms a single text string for inference."""
+        cleaned_text = self._clean_text(text)
+        # Check if vectorizer is fitted
+        try:
+            return self.vectorizer.transform([cleaned_text])
+        except Exception as e:
+            raise ValueError("Vectorizer is not fitted. Load a vectorizer first.") from e
 
     def transform(
         self, data: List[Review]

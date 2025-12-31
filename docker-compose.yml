@@ -18,7 +18,7 @@ services:
       - mongo
     environment:
       - MONGO_URI=${MONGO_URI_DOCKER:-mongodb://mongo:27017/}
-      - DB_NAME=${DB_NAME:-amazon_reviews}
+      - DB_NAME=${DB_NAME:-sentiment_db}
       - COLLECTION_NAME=${COLLECTION_NAME:-reviews}
       - KAGGLE_CONFIG_DIR=/app
     volumes:

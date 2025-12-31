@@ -1,108 +1,164 @@
 # Sentiment Analysis for Product Reviews
 
-A Big Data project pipeline for analyzing sentiment in Amazon Fine Food Reviews.
+A Big Data project implementing a complete ETL pipeline for sentiment analysis on Amazon Fine Food Reviews.
 
-## 1. Project Structure
+## 🎯 Features
+
+- **Data Pipeline**: Fetch → Transform → Load architecture
+- **MongoDB Storage**: Persistent data storage with Docker volume support
+- **ML Classification**: TF-IDF vectorization + Logistic Regression
+- **Interactive Dashboard**: Streamlit-based UI with multiple pages
+- **Batch Processing**: Analyze multiple reviews via CSV upload
+
+## 📁 Project Structure
 
 ```text
 project_root/
-├── docker-compose.yml       # Orchestrates Mongo + Web App
-├── .env.example             # Template for environment variables
-├── requirements.txt         # Python dependencies
-├── Dockerfile               # Definition for the web-app container
+├── streamlit_app.py          # Main Streamlit entry point
+├── docker-compose.yml        # Orchestrates Mongo + Web App
+├── requirements.txt          # Python dependencies
+├── Dockerfile                # Container definition
+│
+├── data/                     # Data directory (gitignored)
+│   ├── Reviews.csv           # Raw dataset from Kaggle
+│   ├── model.pkl             # Trained model (persistent)
+│   └── vectorizer.pkl        # Fitted vectorizer (persistent)
+│
 ├── scripts/
-│   └── initialize_db.py     # Script to seed MongoDB with mock data
+│   ├── download_data.py      # Kaggle dataset download
+│   ├── initialize_db.py      # Load CSV into MongoDB
+│   └── train_model.py        # Train and save ML model
+│
 └── src/
-    ├── models.py            # Pydantic data models
-    ├── pipeline.py          # Main pipeline logic
-    ├── fetchers/            # Data fetching layer
-    ├── transformers/        # Data transformation layer
-    ├── loaders/             # Model loading/prediction layer
-    └── app/
-        └── main.py          # Streamlit frontend
+    ├── config.py             # Centralized configuration
+    ├── models.py             # Pydantic data models
+    ├── pipeline.py           # Pipeline orchestration
+    ├── inference.py          # Prediction utilities
+    │
+    ├── fetchers/             # Data fetching layer
+    │   ├── base.py
+    │   ├── csv_fetcher.py
+    │   └── mongo_fetcher.py
+    │
+    ├── transformers/         # Data transformation layer
+    │   ├── base.py
+    │   └── text_sentiment_transformer.py
+    │
+    ├── loaders/              # Model loading/prediction
+    │   ├── base.py
+    │   └── sentiment_loader.py
+    │
+    └── ui/                   # Streamlit UI
+        ├── pages/            # Page modules
+        ├── components/       # Reusable components
+        └── services/         # Business logic
 ```
 
-## 2. Dataset Setup (Required)
+## 🚀 Quick Start
 
-This project uses the **Amazon Fine Food Reviews** dataset from Kaggle.
+### Prerequisites
 
-1.  **Get Kaggle API Token**:
-    *   Go to your [Kaggle Account Settings](https://www.kaggle.com/me/account).
-    *   Scroll to "API" and click "Create New Token".
-    *   This downloads a `kaggle.json` file.
+- Python 3.10+
+- MongoDB (local or Docker)
+- Kaggle API credentials (`kaggle.json`)
 
-2.  **Place the Token**:
-    *   Move `kaggle.json` to the root of this project (`project_root/kaggle.json`).
-    *   **Note:** This file is ignored by git for security.
+### Option A: Local Development
 
-## 3. Setup & Installation
+1. **Clone and Setup**
+   ```bash
+   git clone <repo-url>
+   cd Sentiment-Analysis-for-Product-Reviews
+   python -m venv .venv
+   .\.venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   ```
 
-### Option A: Running with Docker (Recommended)
+2. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env if needed (defaults work for local MongoDB)
+   ```
 
-1.  **Create Environment File**:
-    ```bash
-    cp .env.example .env
-    ```
-    *Note: The `MONGO_URI` in `.env` is for local development. Docker uses its own internal networking.*
+3. **Start MongoDB** (if not running)
+   ```bash
+   docker run -d -p 27017:27017 --name mongo mongo:latest
+   ```
 
-2.  **Build and Start Services**:
-    ```bash
-    docker-compose up --build -d
-    ```
+4. **Initialize Data**
+   ```bash
+   python scripts/download_data.py   # Download from Kaggle
+   python scripts/initialize_db.py   # Load into MongoDB
+   ```
 
-3.  **Initialize Database**:
-    This will automatically download the dataset (using your `kaggle.json`) and load a sample into MongoDB:
-    ```bash
-    docker-compose exec web-app python scripts/initialize_db.py
-    ```
+5. **Train Model**
+   ```bash
+   python scripts/train_model.py
+   ```
 
-4.  **Access the App**:
-    Open [http://localhost:8501](http://localhost:8501)
+6. **Run Application**
+   ```bash
+   streamlit run streamlit_app.py
+   # Or use: .\run_app.bat
+   ```
 
-### Option B: Running Locally (Development)
+### Option B: Docker (Recommended)
 
-1.  **Prerequisites**:
-    *   Python 3.10+
-    *   MongoDB installed and running locally on port 27017.
-    *   `kaggle.json` in the project root (or `~/.kaggle/`).
+1. **Setup**
+   ```bash
+   cp .env.example .env
+   ```
 
-2.  **Create Virtual Environment**:
-    ```bash
-    # Windows
-    python -m venv venv
-    .\venv\Scripts\activate
+2. **Build and Start**
+   ```bash
+   docker-compose up --build -d
+   ```
 
-    # Mac/Linux
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+3. **Initialize Database**
+   ```bash
+   docker-compose exec web-app python scripts/initialize_db.py
+   ```
 
-3.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+4. **Access Application**
+   Open [http://localhost:8501](http://localhost:8501)
 
-4.  **Configure Environment**:
-    Ensure your `.env` file has the local connection string:
-    ```text
-    MONGO_URI=mongodb://localhost:27017/
-    ```
+## 💾 Persistence
 
-5.  **Initialize Database**:
-    ```bash
-    python scripts/initialize_db.py
-    ```
+### Database Persistence
+- MongoDB data is stored in a Docker volume (`mongo_data`)
+- Data survives container restarts
+- No need to re-initialize after server restart
 
-6.  **Run the App**:
-    ```bash
-    streamlit run src/app/main.py
-    ```
+### Model Persistence
+- Trained model (`data/model.pkl`) and vectorizer (`data/vectorizer.pkl`) are saved to disk
+- **Once trained, predictions work immediately** on server restart
+- No need to retrain unless you want to update the model
 
-## 4. Development Workflow
+## 📊 Dashboard Pages
 
-*   **Data Models**: Defined in `src/models.py`.
-*   **Pipeline**: The main logic is in `src/pipeline.py`.
-*   **Extending**:
-    *   Add new data sources in `src/fetchers/`.
-    *   Add new preprocessing steps in `src/transformers/`.
-    *   Add new models in `src/loaders/`.
+| Page | Description |
+|------|-------------|
+| **Home** | Project overview and system status |
+| **Data Explorer** | Visualize data with charts and word clouds |
+| **Single Prediction** | Real-time sentiment analysis for text input |
+| **Batch Analysis** | Upload CSV for bulk sentiment analysis |
+| **Pipeline Status** | Monitor connections and run pipeline scripts |
+
+## 🛠️ Configuration
+
+All configuration is centralized in `src/config.py`:
+
+- MongoDB connection settings
+- Model/vectorizer paths
+- Training parameters
+- UI constants
+
+Environment variables (`.env`):
+```
+MONGO_URI=mongodb://localhost:27017/
+DB_NAME=sentiment_db
+COLLECTION_NAME=reviews
+```
+
+## 📝 License
+
+MIT License
