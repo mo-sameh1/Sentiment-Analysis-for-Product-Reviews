@@ -1,33 +1,67 @@
 services:
   mongo:
     image: mongo:latest
-    container_name: mongo
+    container_name: sentiment-mongo
     volumes:
       - mongo_data:/data/db
     networks:
       - app-network
     ports:
       - "27017:27017"
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  web-app:
+  app:
     build: .
-    container_name: web-app
+    container_name: sentiment-app
     ports:
       - "8501:8501"
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     environment:
-      - MONGO_URI=${MONGO_URI_DOCKER:-mongodb://mongo:27017/}
-      - DB_NAME=${DB_NAME:-sentiment_db}
-      - COLLECTION_NAME=${COLLECTION_NAME:-reviews}
-      - KAGGLE_CONFIG_DIR=/app
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME}
+      - COLLECTION_NAME=${COLLECTION_NAME}
+      - KAGGLE_CONFIG_DIR=${KAGGLE_CONFIG_DIR}
     volumes:
-      - .:/app
+      - app_data:/app/data
+      - ./kaggle.json:/app/kaggle.json:ro
     networks:
       - app-network
+    restart: unless-stopped
+
+  # One-time initialization service
+  init:
+    build: .
+    container_name: sentiment-init
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME}
+      - COLLECTION_NAME=${COLLECTION_NAME}
+      - KAGGLE_CONFIG_DIR=${KAGGLE_CONFIG_DIR}
+    volumes:
+      - app_data:/app/data
+      - ./kaggle.json:/app/kaggle.json:ro
+    networks:
+      - app-network
+    command: >
+      sh -c "python scripts/download_data.py && 
+             python scripts/initialize_db.py && 
+             python scripts/train_model.py"
+    profiles:
+      - init
 
 volumes:
   mongo_data:
+  app_data:
 
 networks:
   app-network:

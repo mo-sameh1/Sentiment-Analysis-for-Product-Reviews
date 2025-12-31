@@ -98,28 +98,72 @@ project_root/
 6. **Run Application**
    ```bash
    streamlit run streamlit_app.py
-   # Or use: .\run_app.bat
    ```
 
 ### Option B: Docker (Recommended)
 
-1. **Setup**
-   ```bash
-   cp .env.example .env
-   ```
+Run the entire application in containers - works on any machine with Docker.
 
-2. **Build and Start**
-   ```bash
-   docker-compose up --build -d
-   ```
+1. **Prerequisites**
+   - Docker and Docker Compose installed
+   - Kaggle API credentials (`kaggle.json`) in project root
 
-3. **Initialize Database**
+2. **First Time Setup (Initialize Data & Train Model)**
    ```bash
-   docker-compose exec web-app python scripts/initialize_db.py
+   # Build and run with initialization profile
+   docker-compose --profile init up --build
+   ```
+   This will:
+   - Start MongoDB
+   - Download the dataset from Kaggle
+   - Load data into MongoDB
+   - Train the ML model
+
+3. **Regular Usage (After Initialization)**
+   ```bash
+   # Start the application
+   docker-compose up -d
+   
+   # View logs
+   docker-compose logs -f app
+   
+   # Stop
+   docker-compose down
    ```
 
 4. **Access Application**
    Open [http://localhost:8501](http://localhost:8501)
+
+5. **Re-initialize (if needed)**
+   ```bash
+   # Run initialization again
+   docker-compose --profile init up init
+   ```
+
+### Docker Commands Reference
+
+```bash
+# Build without cache
+docker-compose build --no-cache
+
+# Start in foreground (see logs)
+docker-compose up
+
+# Start in background
+docker-compose up -d
+
+# Stop and remove containers
+docker-compose down
+
+# Stop and remove containers + volumes (fresh start)
+docker-compose down -v
+
+# View running containers
+docker-compose ps
+
+# Execute command in running container
+docker-compose exec app python scripts/train_model.py
+```
 
 ## 💾 Persistence
 
@@ -129,9 +173,21 @@ project_root/
 - No need to re-initialize after server restart
 
 ### Model Persistence
-- Trained model (`data/model.pkl`) and vectorizer (`data/vectorizer.pkl`) are saved to disk
-- **Once trained, predictions work immediately** on server restart
+- Trained model and vectorizer are stored in Docker volume (`app_data`)
+- **Once trained, predictions work immediately** on container restart
 - No need to retrain unless you want to update the model
+
+### Volume Management
+```bash
+# List volumes
+docker volume ls
+
+# Inspect volume
+docker volume inspect sentiment-analysis-for-product-reviews_app_data
+
+# Remove all project volumes (fresh start)
+docker-compose down -v
+```
 
 ## 📊 Dashboard Pages
 

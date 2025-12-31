@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+.env.local
+
+# Keep kaggle.json but ignore local data that will be downloaded
+# data/Reviews.csv  # This gets downloaded in container
+
+# Notebooks checkpoints
+.ipynb_checkpoints
+
+# Windows specific
+run_app.bat
