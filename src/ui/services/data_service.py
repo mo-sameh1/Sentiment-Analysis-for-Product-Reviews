@@ -1,5 +1,6 @@
 """
 Data service for fetching and caching data from MongoDB.
+Uses the pipeline's fetcher and transformer components.
 """
 
 from typing import List, Optional
@@ -10,6 +11,8 @@ from src.config import (
     COLLECTION_NAME,
     MONGO_CONNECTION_TIMEOUT_MS,
 )
+from src.fetchers.mongo_fetcher import MongoFetcher
+from src.transformers.text_sentiment_transformer import TextSentimentTransformer
 
 
 class DataService:
@@ -28,8 +31,22 @@ class DataService:
         self.mongo_uri = MONGO_URI
         self.db_name = DB_NAME
         self.collection_name = COLLECTION_NAME
+        self._fetcher: Optional[MongoFetcher] = None
+        self._transformer: Optional[TextSentimentTransformer] = None
         self._cached_data: Optional[pd.DataFrame] = None
         self._cache_limit: int = 0
+    
+    @property
+    def fetcher(self) -> MongoFetcher:
+        if self._fetcher is None:
+            self._fetcher = MongoFetcher(self.mongo_uri, self.db_name, self.collection_name)
+        return self._fetcher
+    
+    @property
+    def transformer(self) -> TextSentimentTransformer:
+        if self._transformer is None:
+            self._transformer = TextSentimentTransformer()
+        return self._transformer
     
     def get_connection_info(self) -> dict:
         return {
@@ -43,9 +60,7 @@ class DataService:
             return self._cached_data.head(limit)
         
         try:
-            from src.fetchers.mongo_fetcher import MongoFetcher
-            fetcher = MongoFetcher(self.mongo_uri, self.db_name, self.collection_name)
-            reviews = fetcher.fetch_data(limit=limit)
+            reviews = self.fetcher.fetch_data(limit=limit)
             
             if not reviews:
                 return pd.DataFrame()
@@ -57,6 +72,22 @@ class DataService:
             
         except Exception as e:
             raise ConnectionError(f"Failed to connect to MongoDB: {e}")
+    
+    def clean_text(self, text: str) -> str:
+        return self.transformer._clean_text(text)
+    
+    def add_cleaned_text_column(self, df: pd.DataFrame, source_column: str = "Text") -> pd.DataFrame:
+        df_copy = df.copy()
+        df_copy["Cleaned_Text"] = df_copy[source_column].apply(self.clean_text)
+        return df_copy
+    
+    def add_sentiment_labels(self, df: pd.DataFrame) -> pd.DataFrame:
+        df_copy = df.copy()
+        if "Score" in df_copy.columns:
+            df_copy["Sentiment"] = df_copy["Score"].apply(
+                lambda x: "Positive" if x >= 4 else ("Negative" if x <= 2 else "Neutral")
+            )
+        return df_copy
     
     def check_connection(self) -> bool:
         try:

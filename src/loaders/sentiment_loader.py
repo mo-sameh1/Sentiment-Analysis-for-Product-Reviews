@@ -20,7 +20,7 @@ class SKLearnSentimentLoader(ModelLoader):
     def load(self):
         """Load the pre-trained model."""
         self.model = joblib.load(self.model_path)
-        print(f"✅ Model loaded from '{self.model_path}'")
+        print(f"[OK] Model loaded from '{self.model_path}'")
 
     def predict(self, data: Any) -> List[Sentiment]:
         """

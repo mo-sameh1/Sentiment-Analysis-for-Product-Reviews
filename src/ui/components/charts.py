@@ -34,9 +34,14 @@ def render_sentiment_pie(df: pd.DataFrame):
     if "Score" not in df.columns:
         return
     
-    sentiment_counts = df["Score"].apply(
-        lambda x: "Positive" if x >= 4 else ("Negative" if x <= 2 else "Neutral")
-    ).value_counts()
+    def classify_sentiment(score: int) -> str:
+        if score >= 4:
+            return "Positive"
+        elif score <= 2:
+            return "Negative"
+        return "Neutral"
+    
+    sentiment_counts = df["Score"].apply(classify_sentiment).value_counts()
     
     fig, ax = plt.subplots(figsize=(8, 8))
     colors = {"Positive": "#2ecc71", "Negative": "#e74c3c", "Neutral": "#f39c12"}
@@ -61,14 +66,30 @@ def render_sentiment_pie(df: pd.DataFrame):
     plt.close(fig)
 
 
-def render_wordcloud(df: pd.DataFrame, column: str = "Text", max_words: int = 100):
+def render_wordcloud(
+    df: pd.DataFrame, 
+    column: str = "Text", 
+    max_words: int = 100,
+    use_cleaned: bool = False
+):
     from wordcloud import WordCloud
     
-    if column not in df.columns:
-        st.warning(f"Column '{column}' not found.")
+    target_column = column
+    
+    if use_cleaned and "Cleaned_Text" in df.columns:
+        target_column = "Cleaned_Text"
+    elif use_cleaned:
+        from src.transformers.text_sentiment_transformer import TextSentimentTransformer
+        transformer = TextSentimentTransformer()
+        df = df.copy()
+        df["Cleaned_Text"] = df[column].apply(transformer._clean_text)
+        target_column = "Cleaned_Text"
+    
+    if target_column not in df.columns:
+        st.warning(f"Column '{target_column}' not found.")
         return
     
-    text = " ".join(df[column].dropna().astype(str))
+    text = " ".join(df[target_column].dropna().astype(str))
     
     if not text.strip():
         st.warning("No text data available for word cloud.")
@@ -87,7 +108,8 @@ def render_wordcloud(df: pd.DataFrame, column: str = "Text", max_words: int = 10
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.imshow(wordcloud, interpolation="bilinear")
     ax.axis("off")
-    ax.set_title("Most Frequent Words", fontsize=14, fontweight="bold", pad=20)
+    title = "Most Frequent Words (Cleaned)" if use_cleaned else "Most Frequent Words (Raw)"
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
     st.pyplot(fig)
     plt.close(fig)
 

@@ -94,6 +94,12 @@ def render_batch_analysis_page():
                     help="Number of reviews to process at once"
                 )
             
+            show_cleaned = st.checkbox(
+                "Show preprocessed text",
+                value=False,
+                help="Display the text after cleaning (stopwords removed, lemmatized)"
+            )
+            
             st.divider()
             
             if st.button("🚀 Run Batch Analysis", type="primary", use_container_width=True):
@@ -109,17 +115,23 @@ def render_batch_analysis_page():
                     
                     try:
                         result = pred_service.predict_single(text)
-                        results.append({
+                        result_dict = {
                             "text": text[:200],
                             "sentiment": result.label,
                             "confidence": result.confidence
-                        })
+                        }
+                        if show_cleaned:
+                            result_dict["cleaned_text"] = pred_service.clean_text(text)
+                        results.append(result_dict)
                     except Exception as e:
-                        results.append({
+                        result_dict = {
                             "text": text[:200],
                             "sentiment": "error",
                             "confidence": 0.0
-                        })
+                        }
+                        if show_cleaned:
+                            result_dict["cleaned_text"] = ""
+                        results.append(result_dict)
                 
                 progress_bar.empty()
                 status_text.empty()

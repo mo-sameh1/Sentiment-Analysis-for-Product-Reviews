@@ -98,6 +98,7 @@ def render_prediction_page():
         with st.spinner("Analyzing sentiment..."):
             try:
                 result = pred_service.predict_single(text_input)
+                cleaned_text = pred_service.clean_text(text_input)
                 
                 st.session_state.prediction_history.insert(0, result)
                 if len(st.session_state.prediction_history) > 10:
@@ -126,6 +127,10 @@ def render_prediction_page():
                     """, unsafe_allow_html=True)
                 
                 st.progress(result.confidence)
+                
+                with st.expander("🔍 Preprocessed Text", expanded=False):
+                    st.markdown("**Text after cleaning (stopwords removed, lemmatized):**")
+                    st.code(cleaned_text, language=None)
                 
                 with st.expander("📋 Interpretation Guide"):
                     st.markdown("""

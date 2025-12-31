@@ -1,5 +1,6 @@
 """
 Prediction service for sentiment analysis inference.
+Uses the pipeline's transformer for text preprocessing.
 """
 
 from typing import Optional, List
@@ -11,6 +12,8 @@ from src.config import (
     SENTIMENT_NEGATIVE,
     SENTIMENT_ERROR,
 )
+from src.transformers.text_sentiment_transformer import TextSentimentTransformer
+from src.loaders.sentiment_loader import SKLearnSentimentLoader
 
 
 @dataclass
@@ -41,7 +44,25 @@ class PredictionService:
         if self._initialized:
             return
         self._initialized = True
-        self._predictor = None
+        self._transformer: Optional[TextSentimentTransformer] = None
+        self._loader: Optional[SKLearnSentimentLoader] = None
+    
+    @property
+    def transformer(self) -> TextSentimentTransformer:
+        if self._transformer is None:
+            self._transformer = TextSentimentTransformer()
+            if VECTORIZER_PATH.exists():
+                self._transformer.load_vectorizer(str(VECTORIZER_PATH))
+        return self._transformer
+    
+    @property
+    def loader(self) -> SKLearnSentimentLoader:
+        if self._loader is None:
+            self._loader = SKLearnSentimentLoader(str(MODEL_PATH))
+        return self._loader
+    
+    def clean_text(self, text: str) -> str:
+        return self.transformer._clean_text(text)
     
     def is_model_available(self) -> bool:
         return MODEL_PATH.exists() and VECTORIZER_PATH.exists()
@@ -61,18 +82,12 @@ class PredictionService:
             
         return info
     
-    def _get_predictor(self):
-        if self._predictor is None:
-            from src.inference import SentimentPredictor
-            self._predictor = SentimentPredictor(str(MODEL_PATH), str(VECTORIZER_PATH))
-        return self._predictor
-    
     def predict_single(self, text: str) -> PredictionResult:
         if not self.is_model_available():
             raise FileNotFoundError("Model not trained. Please run the training pipeline first.")
         
-        predictor = self._get_predictor()
-        result = predictor.predict_single(text)
+        features = self.transformer.transform_inference(text)
+        result = self.loader.predict_single(features)
         
         return PredictionResult(
             text=text,

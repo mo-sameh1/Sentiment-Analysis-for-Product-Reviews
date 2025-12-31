@@ -103,8 +103,16 @@ def render_eda_page():
     
     with tab2:
         st.markdown("#### Word Cloud from Review Text")
-        max_words = st.slider("Maximum words", 50, 200, 100)
-        render_wordcloud(df, column="Text", max_words=max_words)
+        col1, col2 = st.columns(2)
+        with col1:
+            max_words = st.slider("Maximum words", 50, 200, 100)
+        with col2:
+            use_cleaned = st.checkbox(
+                "Use cleaned text (stopwords & lemmatization)", 
+                value=True,
+                help="Apply the same preprocessing used in model training"
+            )
+        render_wordcloud(df, column="Text", max_words=max_words, use_cleaned=use_cleaned)
     
     with tab3:
         col1, col2 = st.columns(2)
